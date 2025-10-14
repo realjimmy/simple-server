@@ -2,6 +2,8 @@
 
 python实现的一个轻量级的服务器，提供HTTP和UDP服务器功能，支持多线程处理和长连接功能，主要用于搭建测试环境做功能测试。
 
+[English Documentation](README.md) | [中文文档](README_CN.md)
+
 ## 功能特性
 
 ### HTTP服务器 (`http/http_server.py`)
@@ -10,11 +12,13 @@ python实现的一个轻量级的服务器，提供HTTP和UDP服务器功能，�
 - **JSON API**: RESTful API，接收和返回JSON数据
 - **请求日志**: 详细记录客户端IP、线程ID和请求信息
 - **错误处理**: 全面的错误处理，返回适当的HTTP状态码
+- **响应延迟**: 可配置的毫秒级延迟，用于测试超时
 
 ### UDP服务器 (`udp/udp_server.py`)
 - **JSON响应服务器**: 接收UDP消息并发送JSON格式确认
 - **客户端信息**: 返回客户端IP和端口信息
 - **结构化响应**: 与HTTP服务器一致的JSON格式
+- **响应延迟**: 可配置的毫秒级延迟，用于测试超时
 
 ## 系统要求
 
@@ -32,11 +36,19 @@ python simple-server.py http 8080
 # 启动HTTP服务器（禁用JSON验证）
 python simple-server.py http 8080 --no-json
 
+# 启动HTTP服务器（响应延迟）
+python simple-server.py http --delay 1000
+python simple-server.py http 8080 --delay 500
+
 # 启动UDP服务器（默认端口9000）
 python simple-server.py udp
 
 # 启动UDP服务器（自定义端口）
 python simple-server.py udp 9999
+
+# 启动UDP服务器（响应延迟）
+python simple-server.py udp --delay 1000
+python simple-server.py udp 9999 --delay 500
 
 # 显示帮助
 python simple-server.py -h

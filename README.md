@@ -2,6 +2,8 @@
 
 A lightweight Python server implementation that provides both HTTP and UDP server functionality with multi-threading support and long connection capabilities, mainly used for setting up test environments for functional testing.
 
+[中文文档](README_CN.md) | [English Documentation](README.md)
+
 ## Features
 
 ### HTTP Server (`http/http_server.py`)
@@ -10,11 +12,13 @@ A lightweight Python server implementation that provides both HTTP and UDP serve
 - **JSON API**: RESTful API that accepts and returns JSON data
 - **Request Logging**: Detailed logging of client IP, thread ID, and request information
 - **Error Handling**: Comprehensive error handling with appropriate HTTP status codes
+- **Response Delay**: Configurable delay in milliseconds for testing timeouts
 
 ### UDP Server (`udp/udp_server.py`)
 - **JSON Response Server**: Receives UDP messages and sends back JSON confirmation
 - **Client Information**: Returns client IP and port information
 - **Structured Response**: Consistent JSON format with HTTP server
+- **Response Delay**: Configurable delay in milliseconds for testing timeouts
 
 ## Requirements
 
@@ -35,11 +39,19 @@ python simple-server.py http 8080
 # Start HTTP server without JSON validation
 python simple-server.py http 8080 --no-json
 
+# Start HTTP server with response delay
+python simple-server.py http --delay 1000
+python simple-server.py http 8080 --delay 500
+
 # Start UDP server (default port 9000)
 python simple-server.py udp
 
 # Start UDP server on custom port
 python simple-server.py udp 9999
+
+# Start UDP server with response delay
+python simple-server.py udp --delay 1000
+python simple-server.py udp 9999 --delay 500
 
 # Show help
 python simple-server.py -h

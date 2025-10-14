@@ -14,6 +14,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 class LongConnectionHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         self.validate_json = kwargs.pop('validate_json', True)
+        self.delay_ms = kwargs.pop('delay_ms', 0)
         super().__init__(*args, **kwargs)
     
     def _send_response(self, content, content_type='text/plain', status_code=200):
@@ -40,7 +41,9 @@ class LongConnectionHandler(BaseHTTPRequestHandler):
         
         print(f"[{request_time}] GET request - Thread ID: {thread_id}, Client: {client_ip}:{client_port}, Path: {self.path}")
         
-        # Fast processing, no delay
+        # Add delay if specified
+        if self.delay_ms > 0:
+            time.sleep(self.delay_ms / 1000.0)
         
         # Return different content based on path
         if self.path == '/':
@@ -71,6 +74,10 @@ class LongConnectionHandler(BaseHTTPRequestHandler):
         request_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
         print(f"[{request_time}] POST request - Thread ID: {thread_id}, Client: {client_ip}:{client_port}, Path: {self.path}")
+        
+        # Add delay if specified
+        if self.delay_ms > 0:
+            time.sleep(self.delay_ms / 1000.0)
         
         try:
             # Get request content length
@@ -142,6 +149,7 @@ if __name__ == '__main__':
     # Default settings
     port = 8000
     validate_json = True
+    delay_ms = 0
     
     # Parse command line arguments
     if len(sys.argv) > 1:
@@ -149,11 +157,12 @@ if __name__ == '__main__':
         if sys.argv[1] in ['-h', '--help']:
             print("HTTP Server - Multi-threaded server with JSON support")
             print()
-            print("Usage: python http_server.py [port] [--no-json]")
+            print("Usage: python http_server.py [port] [--no-json] [--delay milliseconds]")
             print()
             print("Arguments:")
             print("  port              Port number (default: 8000)")
             print("  --no-json         Disable JSON validation for POST requests")
+            print("  --delay ms        Response delay in milliseconds (default: 0)")
             print("  -h, --help        Show this help message")
             print()
             print("Examples:")
@@ -161,15 +170,37 @@ if __name__ == '__main__':
             print("  python http_server.py 8080               # Start on port 8080 with JSON validation")
             print("  python http_server.py --no-json          # Start on port 8000 without JSON validation")
             print("  python http_server.py 8080 --no-json     # Start on port 8080 without JSON validation")
+            print("  python http_server.py --delay 1000       # Start on port 8000 with 1 second delay")
+            print("  python http_server.py 8080 --delay 500   # Start on port 8080 with 500ms delay")
             sys.exit(0)
         
-        # Check for --no-json flag in any position
-        if '--no-json' in sys.argv:
+        # Parse arguments
+        args = sys.argv[1:]
+        
+        # Check for --no-json flag
+        if '--no-json' in args:
             validate_json = False
-            # Remove --no-json from arguments for port parsing
-            args = [arg for arg in sys.argv[1:] if arg != '--no-json']
-        else:
-            args = sys.argv[1:]
+            args = [arg for arg in args if arg != '--no-json']
+        
+        # Check for --delay parameter
+        if '--delay' in args:
+            delay_index = args.index('--delay')
+            if delay_index + 1 < len(args):
+                try:
+                    delay_ms = int(args[delay_index + 1])
+                    if delay_ms < 0:
+                        print("Error: Delay must be non-negative!")
+                        sys.exit(1)
+                    # Remove delay arguments for port parsing
+                    args = [arg for i, arg in enumerate(args) if i not in [delay_index, delay_index + 1]]
+                except ValueError:
+                    print("Error: Delay must be an integer!")
+                    print("Use -h or --help for usage information")
+                    sys.exit(1)
+            else:
+                print("Error: --delay requires a value!")
+                print("Use -h or --help for usage information")
+                sys.exit(1)
         
         # Parse port if provided
         if args:
@@ -185,9 +216,9 @@ if __name__ == '__main__':
     
     server_address = ('', port)
     
-    # Create handler with JSON validation setting
+    # Create handler with JSON validation and delay settings
     def handler(*args, **kwargs):
-        return LongConnectionHandler(*args, validate_json=validate_json, **kwargs)
+        return LongConnectionHandler(*args, validate_json=validate_json, delay_ms=delay_ms, **kwargs)
     
     httpd = ThreadedHTTPServer(server_address, handler)
     
@@ -202,10 +233,13 @@ if __name__ == '__main__':
         print('  - POST requests: Receive raw data (no JSON validation)')
     print('  - Long connections: Support HTTP Keep-Alive')
     print('  - Parallel processing: Each request handled in independent thread')
+    if delay_ms > 0:
+        print(f'  - Response delay: {delay_ms}ms')
     print('=' * 60)
-    print(f'Usage: python http_server.py [port] [--no-json]')
+    print(f'Usage: python http_server.py [port] [--no-json] [--delay ms]')
     print(f'Current port: {port}')
     print(f'JSON validation: {"Enabled" if validate_json else "Disabled"}')
+    print(f'Response delay: {delay_ms}ms')
     print('Press Ctrl+C to stop the server')
     print('=' * 60)
     
