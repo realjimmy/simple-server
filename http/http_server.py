@@ -19,13 +19,19 @@ class LongConnectionHandler(BaseHTTPRequestHandler):
     
     def _send_response(self, content, content_type='text/plain', status_code=200):
         """Send HTTP response"""
-        self.send_response(status_code)
-        self.send_header('Content-Type', content_type)
-        self.send_header('Connection', 'keep-alive')  # Support long connections
-        self.send_header('Content-Length', str(len(content.encode('utf-8'))))
-        self.send_header('Access-Control-Allow-Origin', '*')  # Support CORS
-        self.end_headers()
-        self.wfile.write(content.encode('utf-8'))
+        try:
+            self.send_response(status_code)
+            self.send_header('Content-Type', content_type)
+            self.send_header('Connection', 'keep-alive')  # Support long connections
+            self.send_header('Content-Length', str(len(content.encode('utf-8'))))
+            self.send_header('Access-Control-Allow-Origin', '*')  # Support CORS
+            self.end_headers()
+            self.wfile.write(content.encode('utf-8'))
+        except (BrokenPipeError, ConnectionResetError) as e:
+            # Client disconnected before response was sent
+            print(f"Client disconnected: {e}")
+        except Exception as e:
+            print(f"Error sending response: {e}")
     
     def _send_json_response(self, data, status_code=200):
         """Send JSON response"""
@@ -41,30 +47,35 @@ class LongConnectionHandler(BaseHTTPRequestHandler):
         
         print(f"[{request_time}] GET request - Thread ID: {thread_id}, Client: {client_ip}:{client_port}, Path: {self.path}")
         
-        # Add delay if specified
-        if self.delay_ms > 0:
-            time.sleep(self.delay_ms / 1000.0)
+        try:
+            # Add delay if specified
+            if self.delay_ms > 0:
+                time.sleep(self.delay_ms / 1000.0)
         
-        # Return different content based on path
-        if self.path == '/':
-            response_data = {
-                "status": "success",
-                "message": "Welcome to the long connection server",
-                "client_ip": client_ip,
-                "client_port": client_port,
-                "time": time.ctime()
-            }
-            self._send_json_response(response_data)
-        else:
-            response_data = {
-                "status": "success",
-                "message": f"GET request processed successfully",
-                "path": self.path,
-                "client_ip": client_ip,
-                "client_port": client_port,
-                "time": time.ctime()
-            }
-            self._send_json_response(response_data)
+            # Return different content based on path
+            if self.path == '/':
+                response_data = {
+                    "status": "success",
+                    "message": "Welcome to the long connection server",
+                    "client_ip": client_ip,
+                    "client_port": client_port,
+                    "time": time.ctime()
+                }
+                self._send_json_response(response_data)
+            else:
+                response_data = {
+                    "status": "success",
+                    "message": f"GET request processed successfully",
+                    "path": self.path,
+                    "client_ip": client_ip,
+                    "client_port": client_port,
+                    "time": time.ctime()
+                }
+                self._send_json_response(response_data)
+        except (BrokenPipeError, ConnectionResetError):
+            print(f"[{request_time}] Client {client_ip}:{client_port} disconnected during request processing")
+        except Exception as e:
+            print(f"[{request_time}] Error processing GET request: {e}")
     
     def do_POST(self):
         """Handle POST requests"""
@@ -131,12 +142,17 @@ class LongConnectionHandler(BaseHTTPRequestHandler):
                 }
                 self._send_json_response(response_data)
                 
+        except (BrokenPipeError, ConnectionResetError):
+            print(f"[{request_time}] Client {client_ip}:{client_port} disconnected during request processing")
         except Exception as e:
             print(f"[{request_time}] Error processing POST request: {e}")
-            self._send_json_response({
-                "status": "error",
-                "message": f"Internal server error: {str(e)}"
-            }, 500)
+            try:
+                self._send_json_response({
+                    "status": "error",
+                    "message": f"Internal server error: {str(e)}"
+                }, 500)
+            except (BrokenPipeError, ConnectionResetError):
+                print(f"[{request_time}] Client {client_ip}:{client_port} disconnected before error response could be sent")
     
     def log_message(self, format, *args):
         """Override log method to avoid duplicate output"""
